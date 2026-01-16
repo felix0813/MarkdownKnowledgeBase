@@ -23,9 +23,20 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Background" Value="{StaticResource ButtonBackground}"/>
             <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="MinWidth" Value="96"/>
+            <Setter Property="MaxWidth" Value="180"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="ContentTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -74,7 +85,7 @@
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
                     <TextBlock Text="分类" FontWeight="Bold" Margin="0,0,0,8"/>
-                    <WrapPanel Margin="0,0,0,8" ItemHeight="34" ItemWidth="110">
+                    <WrapPanel Margin="0,0,0,8">
                         <Button Margin="0,0,8,8" Click="OnAddCategory">新增分类</Button>
                         <Button Margin="0,0,8,8" Click="OnRefreshCategories">刷新</Button>
                     </WrapPanel>
@@ -83,7 +94,7 @@
 
                 <StackPanel>
                     <TextBlock Text="笔记" FontWeight="Bold" Margin="0,0,0,8"/>
-                    <WrapPanel Margin="0,0,0,8" ItemHeight="34" ItemWidth="100">
+                    <WrapPanel Margin="0,0,0,8">
                         <Button Margin="0,0,8,8" Click="OnAddNote">新增笔记</Button>
                         <Button Margin="0,0,8,8" Click="OnImportNote">导入</Button>
                         <Button Margin="0,0,8,8" Click="OnDeleteNote">删除</Button>
