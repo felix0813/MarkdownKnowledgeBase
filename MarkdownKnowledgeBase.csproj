@@ -7,10 +7,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <Platforms>AnyCPU;x64</Platforms>
+    <ApplicationIcon>Assets\App.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Markdig" Version="0.38.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\App.ico" />
   </ItemGroup>
 
 </Project>
