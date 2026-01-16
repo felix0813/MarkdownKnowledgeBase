@@ -49,19 +49,21 @@
                 <Button Width="120" Margin="0,0,8,0" Click="OnDeleteLink">删除跳转</Button>
                 <Button Width="100" Margin="0,0,8,0" Click="OnJump">跳转</Button>
                 <Button Width="100" Click="OnBack">返回</Button>
+                <Button Width="120" Margin="16,0,8,0" x:Name="ToggleEditorButton" Click="OnToggleEditor">隐藏编辑</Button>
+                <Button Width="120" x:Name="TogglePreviewButton" Click="OnTogglePreview">隐藏预览</Button>
             </StackPanel>
 
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition x:Name="EditorColumn" Width="*"/>
+                    <ColumnDefinition x:Name="PreviewColumn" Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" BorderBrush="#DDDDDD" BorderThickness="1" Margin="0,0,6,0">
+                <Border x:Name="EditorBorder" Grid.Column="0" BorderBrush="#DDDDDD" BorderThickness="1" Margin="0,0,6,0">
                     <TextBox x:Name="EditorBox" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap"
                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                              TextChanged="OnEditorTextChanged"/>
                 </Border>
-                <Border Grid.Column="1" BorderBrush="#DDDDDD" BorderThickness="1" Margin="6,0,0,0">
+                <Border x:Name="PreviewBorder" Grid.Column="1" BorderBrush="#DDDDDD" BorderThickness="1" Margin="6,0,0,0">
                     <WebBrowser x:Name="PreviewBrowser"/>
                 </Border>
             </Grid>
