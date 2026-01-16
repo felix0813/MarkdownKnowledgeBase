@@ -26,6 +26,8 @@
                 <TextBlock Text="笔记" FontWeight="Bold" Margin="0,0,0,8"/>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                     <Button Width="110" Margin="0,0,8,0" Click="OnAddNote">新增笔记</Button>
+                    <Button Width="110" Margin="0,0,8,0" Click="OnImportNote">导入</Button>
+                    <Button Width="110" Margin="0,0,8,0" Click="OnDeleteNote">删除</Button>
                     <Button Width="110" Click="OnSaveNote">保存</Button>
                 </StackPanel>
                 <ListBox x:Name="NoteList" DisplayMemberPath="Name" SelectionChanged="OnNoteSelectionChanged"/>
@@ -42,7 +44,9 @@
             <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                 <Button Width="140" Margin="0,0,8,0" Click="OnAddSourceMarker">添加源标记</Button>
                 <Button Width="140" Margin="0,0,8,0" Click="OnAddTargetMarker">添加目标标记</Button>
+                <Button Width="120" Margin="0,0,8,0" Click="OnDeleteMarker">删除标记</Button>
                 <Button Width="120" Margin="0,0,8,0" Click="OnCreateLink">建立跳转</Button>
+                <Button Width="120" Margin="0,0,8,0" Click="OnDeleteLink">删除跳转</Button>
                 <Button Width="100" Margin="0,0,8,0" Click="OnJump">跳转</Button>
                 <Button Width="100" Click="OnBack">返回</Button>
             </StackPanel>

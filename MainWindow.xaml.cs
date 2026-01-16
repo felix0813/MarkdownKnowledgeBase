@@ -1,4 +1,5 @@
 using Markdig;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -154,6 +155,86 @@ namespace MarkdownKnowledgeBase
             UpdatePreview();
         }
 
+        private void OnImportNote(object sender, RoutedEventArgs e)
+        {
+            if (CategoryList.SelectedItem is not string category)
+            {
+                MessageBox.Show("请先选择分类。");
+                return;
+            }
+
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Markdown 文件 (*.md)|*.md|所有文件 (*.*)|*.*",
+                Title = "选择要导入的 Markdown 文件"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            var sourcePath = dialog.FileName;
+            if (!File.Exists(sourcePath))
+            {
+                MessageBox.Show("选择的文件不存在。");
+                return;
+            }
+
+            var fileName = Path.GetFileNameWithoutExtension(sourcePath);
+            var destinationPath = Path.Combine(_rootPath, category, $"{fileName}.md");
+            if (File.Exists(destinationPath))
+            {
+                var overwrite = MessageBox.Show("目标笔记已存在，是否覆盖？", "确认覆盖", MessageBoxButton.YesNo);
+                if (overwrite != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+            }
+
+            File.Copy(sourcePath, destinationPath, true);
+            LoadNotes(category);
+        }
+
+        private void OnDeleteNote(object sender, RoutedEventArgs e)
+        {
+            if (CategoryList.SelectedItem is not string category)
+            {
+                MessageBox.Show("请先选择分类。");
+                return;
+            }
+
+            if (NoteList.SelectedItem is not NoteItem note)
+            {
+                MessageBox.Show("请先选择要删除的笔记。");
+                return;
+            }
+
+            var confirm = MessageBox.Show($"确定删除笔记 \"{note.Name}\" 吗？", "确认删除", MessageBoxButton.YesNo);
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            if (File.Exists(note.Path))
+            {
+                File.Delete(note.Path);
+            }
+
+            var relativePath = GetRelativeNotePath(note.Path);
+            var markersToRemove = _metadata.Markers.Where(marker => marker.NotePath == relativePath).ToList();
+            RemoveMarkersAndLinks(markersToRemove);
+
+            if (_currentNote?.Path == note.Path)
+            {
+                _currentNote = null;
+                EditorBox.Text = string.Empty;
+                UpdatePreview();
+            }
+
+            LoadNotes(category);
+        }
+
         private void OnNoteSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (NoteList.SelectedItem is NoteItem note)
@@ -210,6 +291,25 @@ namespace MarkdownKnowledgeBase
             listBox.SelectedItem = display;
         }
 
+        private void OnDeleteMarker(object sender, RoutedEventArgs e)
+        {
+            var marker = GetSelectedMarker(SourceMarkerList.SelectedItem as string)
+                ?? GetSelectedMarker(TargetMarkerList.SelectedItem as string);
+            if (marker is null)
+            {
+                MessageBox.Show("请选择要删除的标记。");
+                return;
+            }
+
+            var confirm = MessageBox.Show($"确定删除标记 \"{marker.Name}\" 吗？", "确认删除", MessageBoxButton.YesNo);
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            RemoveMarkersAndLinks(new List<Marker> { marker });
+        }
+
         private void OnCreateLink(object sender, RoutedEventArgs e)
         {
             var sourceMarker = GetSelectedMarker(SourceMarkerList.SelectedItem as string);
@@ -222,6 +322,30 @@ namespace MarkdownKnowledgeBase
 
             var link = new Link(Guid.NewGuid().ToString(), sourceMarker.Id, targetMarker.Id);
             _metadata.Links.Add(link);
+            SaveMetadata();
+        }
+
+        private void OnDeleteLink(object sender, RoutedEventArgs e)
+        {
+            if (LinkList.SelectedItem is not string linkDisplay)
+            {
+                MessageBox.Show("请选择要删除的跳转关系。");
+                return;
+            }
+
+            var link = _metadata.Links.FirstOrDefault(item => DisplayLink(item) == linkDisplay);
+            if (link is null)
+            {
+                return;
+            }
+
+            var confirm = MessageBox.Show("确定删除该跳转关系吗？", "确认删除", MessageBoxButton.YesNo);
+            if (confirm != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            _metadata.Links.Remove(link);
             SaveMetadata();
         }
 
@@ -308,6 +432,21 @@ namespace MarkdownKnowledgeBase
         private string GetRelativeNotePath(string notePath)
         {
             return Path.GetRelativePath(_rootPath, notePath);
+        }
+
+        private void RemoveMarkersAndLinks(List<Marker> markersToRemove)
+        {
+            if (markersToRemove.Count == 0)
+            {
+                return;
+            }
+
+            var markerIds = new HashSet<string>(markersToRemove.Select(marker => marker.Id));
+            _metadata.Markers = _metadata.Markers.Where(marker => !markerIds.Contains(marker.Id)).ToList();
+            _metadata.Links = _metadata.Links
+                .Where(link => !markerIds.Contains(link.SourceMarkerId) && !markerIds.Contains(link.TargetMarkerId))
+                .ToList();
+            SaveMetadata();
         }
 
         private string? Prompt(string prompt)
