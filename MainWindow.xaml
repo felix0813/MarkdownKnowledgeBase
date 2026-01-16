@@ -5,65 +5,131 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MarkdownKnowledgeBase"
         mc:Ignorable="d"
-        Title="Markdown Knowledge Base" Height="720" Width="1200">
-    <Grid>
+        Title="Markdown Knowledge Base" Height="720" Width="1200" Background="#F1F3F6">
+    <Window.Resources>
+        <SolidColorBrush x:Key="PanelBackground" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="PanelBorder" Color="#E3E7EF"/>
+        <SolidColorBrush x:Key="PrimaryText" Color="#1F2937"/>
+        <SolidColorBrush x:Key="SecondaryText" Color="#6B7280"/>
+        <SolidColorBrush x:Key="ButtonBackground" Color="#2563EB"/>
+        <SolidColorBrush x:Key="ButtonHover" Color="#1D4ED8"/>
+        <SolidColorBrush x:Key="ButtonPressed" Color="#1E40AF"/>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource PrimaryText}"/>
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource ButtonBackground}"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource ButtonHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{StaticResource ButtonPressed}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ListBox">
+            <Setter Property="BorderBrush" Value="{StaticResource PanelBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="#F9FAFB"/>
+            <Setter Property="Padding" Value="4"/>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="BorderBrush" Value="{StaticResource PanelBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="260"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <DockPanel Grid.Column="0" Background="#F7F7F7" LastChildFill="True">
-            <StackPanel DockPanel.Dock="Top" Margin="12">
-                <TextBlock Text="分类" FontWeight="Bold" Margin="0,0,0,8"/>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                    <Button Width="110" Margin="0,0,8,0" Click="OnAddCategory">新增分类</Button>
-                    <Button Width="110" Click="OnRefreshCategories">刷新</Button>
+        <Border Grid.Column="0" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}"
+                BorderThickness="1" CornerRadius="10" Padding="12">
+            <DockPanel LastChildFill="True">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                    <TextBlock Text="分类" FontWeight="Bold" Margin="0,0,0,8"/>
+                    <WrapPanel Margin="0,0,0,8" ItemHeight="34" ItemWidth="110">
+                        <Button Margin="0,0,8,8" Click="OnAddCategory">新增分类</Button>
+                        <Button Margin="0,0,8,8" Click="OnRefreshCategories">刷新</Button>
+                    </WrapPanel>
+                    <ListBox x:Name="CategoryList" Height="180" SelectionChanged="OnCategorySelectionChanged"/>
                 </StackPanel>
-                <ListBox x:Name="CategoryList" Height="180" SelectionChanged="OnCategorySelectionChanged"/>
-            </StackPanel>
 
-            <StackPanel Margin="12">
-                <TextBlock Text="笔记" FontWeight="Bold" Margin="0,0,0,8"/>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                    <Button Width="110" Margin="0,0,8,0" Click="OnAddNote">新增笔记</Button>
-                    <Button Width="110" Margin="0,0,8,0" Click="OnImportNote">导入</Button>
-                    <Button Width="110" Margin="0,0,8,0" Click="OnDeleteNote">删除</Button>
-                    <Button Width="110" Click="OnSaveNote">保存</Button>
+                <StackPanel>
+                    <TextBlock Text="笔记" FontWeight="Bold" Margin="0,0,0,8"/>
+                    <WrapPanel Margin="0,0,0,8" ItemHeight="34" ItemWidth="100">
+                        <Button Margin="0,0,8,8" Click="OnAddNote">新增笔记</Button>
+                        <Button Margin="0,0,8,8" Click="OnImportNote">导入</Button>
+                        <Button Margin="0,0,8,8" Click="OnDeleteNote">删除</Button>
+                        <Button Margin="0,0,8,8" Click="OnSaveNote">保存</Button>
+                    </WrapPanel>
+                    <ListBox x:Name="NoteList" DisplayMemberPath="Name" SelectionChanged="OnNoteSelectionChanged"/>
                 </StackPanel>
-                <ListBox x:Name="NoteList" DisplayMemberPath="Name" SelectionChanged="OnNoteSelectionChanged"/>
-            </StackPanel>
-        </DockPanel>
+            </DockPanel>
+        </Border>
 
-        <Grid Grid.Column="1" Margin="12">
+        <Border Grid.Column="1" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}"
+                BorderThickness="1" CornerRadius="10" Padding="16">
+        <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="220"/>
             </Grid.RowDefinitions>
 
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                <Button Width="140" Margin="0,0,8,0" Click="OnAddSourceMarker">添加源标记</Button>
-                <Button Width="140" Margin="0,0,8,0" Click="OnAddTargetMarker">添加目标标记</Button>
-                <Button Width="120" Margin="0,0,8,0" Click="OnDeleteMarker">删除标记</Button>
-                <Button Width="120" Margin="0,0,8,0" Click="OnCreateLink">建立跳转</Button>
-                <Button Width="120" Margin="0,0,8,0" Click="OnDeleteLink">删除跳转</Button>
-                <Button Width="100" Margin="0,0,8,0" Click="OnJump">跳转</Button>
-                <Button Width="100" Click="OnBack">返回</Button>
-                <Button Width="120" Margin="16,0,8,0" x:Name="ToggleEditorButton" Click="OnToggleEditor">隐藏编辑</Button>
-                <Button Width="120" x:Name="TogglePreviewButton" Click="OnTogglePreview">隐藏预览</Button>
-            </StackPanel>
+            <DockPanel Margin="0,0,0,12" LastChildFill="False">
+                <WrapPanel DockPanel.Dock="Left">
+                    <Button Margin="0,0,8,8" Click="OnAddSourceMarker">添加源标记</Button>
+                    <Button Margin="0,0,8,8" Click="OnAddTargetMarker">添加目标标记</Button>
+                    <Button Margin="0,0,8,8" Click="OnDeleteMarker">删除标记</Button>
+                    <Button Margin="0,0,8,8" Click="OnCreateLink">建立跳转</Button>
+                    <Button Margin="0,0,8,8" Click="OnDeleteLink">删除跳转</Button>
+                    <Button Margin="0,0,8,8" Click="OnJump">跳转</Button>
+                    <Button Margin="0,0,8,8" Click="OnBack">返回</Button>
+                </WrapPanel>
+                <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
+                    <Button Margin="0,0,8,8" x:Name="ToggleEditorButton" Click="OnToggleEditor">隐藏编辑</Button>
+                    <Button Margin="0,0,8,8" x:Name="TogglePreviewButton" Click="OnTogglePreview">隐藏预览</Button>
+                </WrapPanel>
+            </DockPanel>
 
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition x:Name="EditorColumn" Width="*"/>
                     <ColumnDefinition x:Name="PreviewColumn" Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Border x:Name="EditorBorder" Grid.Column="0" BorderBrush="#DDDDDD" BorderThickness="1" Margin="0,0,6,0">
+                <Border x:Name="EditorBorder" Grid.Column="0" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" Margin="0,0,6,0" CornerRadius="8">
                     <TextBox x:Name="EditorBox" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap"
                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                              TextChanged="OnEditorTextChanged"/>
                 </Border>
-                <Border x:Name="PreviewBorder" Grid.Column="1" BorderBrush="#DDDDDD" BorderThickness="1" Margin="6,0,0,0">
+                <Border x:Name="PreviewBorder" Grid.Column="1" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" Margin="6,0,0,0" CornerRadius="8">
                     <WebBrowser x:Name="PreviewBrowser"/>
                 </Border>
             </Grid>
@@ -88,5 +154,6 @@
                 </StackPanel>
             </Grid>
         </Grid>
+        </Border>
     </Grid>
 </Window>
