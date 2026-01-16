@@ -172,7 +172,7 @@ namespace MarkdownKnowledgeBase
         private void UpdatePreview()
         {
             var html = Markdig.Markdown.ToHtml(EditorBox.Text, _pipeline);
-            var page = $@"<html><head><meta charset=\"utf-8\"><style>body{{font-family:'Segoe UI', sans-serif; padding:16px;}} pre{{background:#f4f4f4; padding:12px;}}</style></head><body>{html}</body></html>";
+            var page = $@"<html><head><meta charset=""utf-8""><style>body{{font-family:'Segoe UI', sans-serif; padding:16px;}} pre{{background:#f4f4f4; padding:12px;}}</style></head><body>{html}</body></html>";
             PreviewBrowser.NavigateToString(page);
         }
 
