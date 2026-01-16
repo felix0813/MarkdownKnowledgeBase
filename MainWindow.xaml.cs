@@ -18,6 +18,8 @@ namespace MarkdownKnowledgeBase
         private readonly Stack<NavigationEntry> _navigationStack = new();
         private readonly MarkdownPipeline _pipeline;
         private NoteItem? _currentNote;
+        private bool _isEditorVisible = true;
+        private bool _isPreviewVisible = true;
 
         public MainWindow()
         {
@@ -29,6 +31,8 @@ namespace MarkdownKnowledgeBase
             LoadMetadata();
             LoadCategories();
             RefreshMarkersAndLinks();
+            UpdateEditorVisibility();
+            UpdatePreviewVisibility();
         }
 
         private void EnsureRoot()
@@ -248,6 +252,40 @@ namespace MarkdownKnowledgeBase
         private void OnEditorTextChanged(object sender, TextChangedEventArgs e)
         {
             UpdatePreview();
+        }
+
+        private void OnToggleEditor(object sender, RoutedEventArgs e)
+        {
+            _isEditorVisible = !_isEditorVisible;
+            UpdateEditorVisibility();
+        }
+
+        private void OnTogglePreview(object sender, RoutedEventArgs e)
+        {
+            _isPreviewVisible = !_isPreviewVisible;
+            UpdatePreviewVisibility();
+        }
+
+        private void UpdateEditorVisibility()
+        {
+            EditorBorder.Visibility = _isEditorVisible ? Visibility.Visible : Visibility.Collapsed;
+            EditorColumn.Width = _isEditorVisible ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+            ToggleEditorButton.Content = _isEditorVisible ? "隐藏编辑" : "显示编辑";
+            UpdateEditorPreviewMargins();
+        }
+
+        private void UpdatePreviewVisibility()
+        {
+            PreviewBorder.Visibility = _isPreviewVisible ? Visibility.Visible : Visibility.Collapsed;
+            PreviewColumn.Width = _isPreviewVisible ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+            TogglePreviewButton.Content = _isPreviewVisible ? "隐藏预览" : "显示预览";
+            UpdateEditorPreviewMargins();
+        }
+
+        private void UpdateEditorPreviewMargins()
+        {
+            EditorBorder.Margin = _isEditorVisible && _isPreviewVisible ? new Thickness(0, 0, 6, 0) : new Thickness(0);
+            PreviewBorder.Margin = _isPreviewVisible && _isEditorVisible ? new Thickness(6, 0, 0, 0) : new Thickness(0);
         }
 
         private void UpdatePreview()
