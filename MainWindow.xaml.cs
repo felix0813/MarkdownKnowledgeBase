@@ -1,6 +1,4 @@
 using Markdig;
-using Markdig.Wpf;
-using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -29,7 +27,7 @@ namespace MarkdownKnowledgeBase
         private bool _isEditorVisible = true;
         private bool _isPreviewVisible = true;
         private bool _isDarkMode;
-        private System.Windows.Forms.NotifyIcon? _trayIcon;
+        private NotifyIcon? _trayIcon;
         private bool _isExitRequested;
         private ScrollViewer? _editorScrollViewer;
         private ScrollViewer? _previewScrollViewer;
@@ -811,12 +809,12 @@ namespace MarkdownKnowledgeBase
 
         private void InitializeTrayIcon()
         {
-            var menu = new System.Windows.Forms.ContextMenuStrip();
-            var exitItem = new System.Windows.Forms.ToolStripMenuItem("退出");
+            var menu = new ContextMenuStrip();
+            var exitItem = new ToolStripMenuItem("退出");
             exitItem.Click += (_, _) => ExitApplication();
             menu.Items.Add(exitItem);
 
-            _trayIcon = new System.Windows.Forms.NotifyIcon
+            _trayIcon = new NotifyIcon
             {
                 Text = "Markdown Knowledge Base",
                 Icon = LoadTrayIcon(),

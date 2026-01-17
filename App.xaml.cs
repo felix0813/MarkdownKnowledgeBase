@@ -1,5 +1,4 @@
-﻿using System.Threading;
-using System.Windows;
+﻿using System.Windows;
 
 namespace MarkdownKnowledgeBase
 {
@@ -16,7 +15,7 @@ namespace MarkdownKnowledgeBase
             _singleInstanceMutex = new Mutex(true, mutexName, out bool createdNew);
             if (!createdNew)
             {
-                MessageBox.Show("应用程序已在运行。", "MarkdownKnowledgeBase", MessageBoxButton.OK, MessageBoxImage.Information);
+                System.Windows.MessageBox.Show("应用程序已在运行。", "MarkdownKnowledgeBase", MessageBoxButton.OK, MessageBoxImage.Information);
                 Shutdown();
                 return;
             }
