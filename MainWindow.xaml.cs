@@ -310,6 +310,76 @@ namespace MarkdownKnowledgeBase
             LoadNotes(category);
         }
 
+        private void OnRenameNote(object sender, RoutedEventArgs e)
+        {
+            if (CategoryList.SelectedItem is not string category)
+            {
+                MessageBox.Show("Please select a category first.");
+                return;
+            }
+
+            if (NoteList.SelectedItem is not NoteItem note)
+            {
+                MessageBox.Show("Please select a note to rename.");
+                return;
+            }
+
+            var newName = Prompt("Enter new note name");
+            if (string.IsNullOrWhiteSpace(newName))
+            {
+                return;
+            }
+
+            newName = newName.Trim();
+            if (string.Equals(newName, note.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (newName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                MessageBox.Show("The note name contains invalid characters.");
+                return;
+            }
+
+            var newPath = Path.Combine(_rootPath, category, $"{newName}.md");
+            if (File.Exists(newPath))
+            {
+                MessageBox.Show("A note with the same name already exists.");
+                return;
+            }
+
+            var oldPath = note.Path;
+            var oldRelative = GetRelativeNotePath(oldPath);
+            var newRelative = GetRelativeNotePath(newPath);
+
+            if (File.Exists(oldPath))
+            {
+                File.Move(oldPath, newPath);
+            }
+
+            if (_currentNote?.Path == oldPath)
+            {
+                _currentNote = new NoteItem(newName, newPath);
+                File.WriteAllText(newPath, EditorBox.Text, Encoding.UTF8);
+            }
+
+            _metadata.Markers = _metadata.Markers
+                .Select(marker => marker.NotePath == oldRelative ? marker with { NotePath = newRelative } : marker)
+                .ToList();
+            SaveMetadata();
+
+            LoadNotes(category);
+            if (NoteList.ItemsSource is List<NoteItem> notes)
+            {
+                var renamed = notes.FirstOrDefault(item => item.Path == newPath);
+                if (renamed is not null)
+                {
+                    NoteList.SelectedItem = renamed;
+                }
+            }
+        }
+
         private void OnNoteSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (NoteList.SelectedItem is NoteItem note)

@@ -32,6 +32,7 @@
                         <Button Margin="0,0,8,8" Click="OnAddNote">新增笔记</Button>
                         <Button Margin="0,0,8,8" Click="OnImportNote">导入</Button>
                         <Button Margin="0,0,8,8" Click="OnDeleteNote">删除</Button>
+                        <Button Margin="0,0,8,8" Click="OnRenameNote">重命名</Button>
                         <Button Margin="0,0,8,8" Click="OnSaveNote">保存</Button>
                     </WrapPanel>
                     <ListBox x:Name="NoteList" DisplayMemberPath="Name" SelectionChanged="OnNoteSelectionChanged"/>
