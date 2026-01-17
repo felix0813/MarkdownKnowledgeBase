@@ -33,7 +33,10 @@
             <Setter Property="ContentTemplate">
                 <Setter.Value>
                     <DataTemplate>
-                        <TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center"/>
+                        <TextBlock Text="{Binding}"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"/>
                     </DataTemplate>
                 </Setter.Value>
             </Setter>
