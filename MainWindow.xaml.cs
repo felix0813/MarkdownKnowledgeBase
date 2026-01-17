@@ -361,11 +361,55 @@ namespace MarkdownKnowledgeBase
 
         private void UpdatePreview()
         {
+            PreviewViewer.FontFamily = new System.Windows.Media.FontFamily("Segoe UI Emoji, Segoe UI Symbol, Segoe UI");
             PreviewViewer.Pipeline = _pipeline;
-            PreviewViewer.Markdown = EditorBox.Text;
+            PreviewViewer.Markdown = ReplaceKeycapDigits(EditorBox.Text);
 
             _previewScrollViewer ??= FindDescendantScrollViewer(PreviewViewer);
             SyncScroll(_editorScrollViewer, _previewScrollViewer);
+        }
+
+        private static string ReplaceKeycapDigits(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            var builder = new StringBuilder(text.Length);
+            for (var i = 0; i < text.Length; i++)
+            {
+                var current = text[i];
+                if (current is >= '0' and <= '9')
+                {
+                    var nextIndex = i + 1;
+                    var hasVariant = nextIndex < text.Length && text[nextIndex] == '\uFE0F';
+                    var keycapIndex = hasVariant ? nextIndex + 1 : nextIndex;
+                    if (keycapIndex < text.Length && text[keycapIndex] == '\u20E3')
+                    {
+                        builder.Append(current switch
+                        {
+                            '0' => '⓪',
+                            '1' => '①',
+                            '2' => '②',
+                            '3' => '③',
+                            '4' => '④',
+                            '5' => '⑤',
+                            '6' => '⑥',
+                            '7' => '⑦',
+                            '8' => '⑧',
+                            '9' => '⑨',
+                            _ => current
+                        });
+                        i = keycapIndex;
+                        continue;
+                    }
+                }
+
+                builder.Append(current);
+            }
+
+            return builder.ToString();
         }
 
         private void OnEditorScrollChanged(object sender, ScrollChangedEventArgs e)
