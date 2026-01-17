@@ -1,5 +1,6 @@
 using Markdig;
 using Microsoft.Win32;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -7,6 +8,12 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using Application = System.Windows.Application;
+using Color = System.Windows.Media.Color;
+using ColorConverter = System.Windows.Media.ColorConverter;
+using ListBox = System.Windows.Controls.ListBox;
+using MessageBox = System.Windows.MessageBox;
+using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
 namespace MarkdownKnowledgeBase
 {
@@ -21,11 +28,14 @@ namespace MarkdownKnowledgeBase
         private bool _isEditorVisible = true;
         private bool _isPreviewVisible = true;
         private bool _isDarkMode;
+        private System.Windows.Forms.NotifyIcon? _trayIcon;
+        private bool _isExitRequested;
 
         public MainWindow()
         {
             InitializeComponent();
             ApplyTheme(false);
+            InitializeTrayIcon();
             _rootPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MarkdownKnowledgeBase");
             _metadataPath = Path.Combine(_rootPath, ".metadata.json");
             _pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
@@ -41,6 +51,32 @@ namespace MarkdownKnowledgeBase
         {
             base.OnSourceInitialized(e);
             SetWindowDarkMode(_isDarkMode);
+        }
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            base.OnClosing(e);
+
+            if (_isExitRequested)
+            {
+                return;
+            }
+
+            e.Cancel = true;
+            Hide();
+            ShowInTaskbar = false;
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            if (_trayIcon is not null)
+            {
+                _trayIcon.Visible = false;
+                _trayIcon.Dispose();
+                _trayIcon = null;
+            }
+
+            base.OnClosed(e);
         }
 
         private void EnsureRoot()
@@ -181,30 +217,33 @@ namespace MarkdownKnowledgeBase
                 Title = "选择要导入的 Markdown 文件"
             };
 
+            dialog.Multiselect = true;
             if (dialog.ShowDialog() != true)
             {
                 return;
             }
 
-            var sourcePath = dialog.FileName;
-            if (!File.Exists(sourcePath))
+            foreach (var sourcePath in dialog.FileNames)
             {
-                MessageBox.Show("选择的文件不存在。");
-                return;
-            }
-
-            var fileName = Path.GetFileNameWithoutExtension(sourcePath);
-            var destinationPath = Path.Combine(_rootPath, category, $"{fileName}.md");
-            if (File.Exists(destinationPath))
-            {
-                var overwrite = MessageBox.Show("目标笔记已存在，是否覆盖？", "确认覆盖", MessageBoxButton.YesNo);
-                if (overwrite != MessageBoxResult.Yes)
+                if (!File.Exists(sourcePath))
                 {
-                    return;
+                    MessageBox.Show("选择的文件不存在。");
+                    continue;
                 }
-            }
 
-            File.Copy(sourcePath, destinationPath, true);
+                var fileName = Path.GetFileNameWithoutExtension(sourcePath);
+                var destinationPath = Path.Combine(_rootPath, category, $"{fileName}.md");
+                if (File.Exists(destinationPath))
+                {
+                    var overwrite = MessageBox.Show("目标笔记已存在，是否覆盖？", "确认覆盖", MessageBoxButton.YesNo);
+                    if (overwrite != MessageBoxResult.Yes)
+                    {
+                        continue;
+                    }
+                }
+
+                File.Copy(sourcePath, destinationPath, true);
+            }
             LoadNotes(category);
         }
 
@@ -607,6 +646,66 @@ namespace MarkdownKnowledgeBase
         {
             var dialog = new InputDialog(prompt) { Owner = this };
             return dialog.ShowDialog() == true ? dialog.Response : null;
+        }
+
+        private void InitializeTrayIcon()
+        {
+            var menu = new System.Windows.Forms.ContextMenuStrip();
+            var exitItem = new System.Windows.Forms.ToolStripMenuItem("退出");
+            exitItem.Click += (_, _) => ExitApplication();
+            menu.Items.Add(exitItem);
+
+            _trayIcon = new System.Windows.Forms.NotifyIcon
+            {
+                Text = "Markdown Knowledge Base",
+                Icon = LoadTrayIcon(),
+                ContextMenuStrip = menu,
+                Visible = true
+            };
+            _trayIcon.DoubleClick += (_, _) => ShowMainWindow();
+        }
+
+        private System.Drawing.Icon LoadTrayIcon()
+        {
+            try
+            {
+                var exePath = Process.GetCurrentProcess().MainModule?.FileName;
+                if (!string.IsNullOrWhiteSpace(exePath))
+                {
+                    var icon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
+                    if (icon is not null)
+                    {
+                        return icon;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return System.Drawing.SystemIcons.Application;
+        }
+
+        private void ShowMainWindow()
+        {
+            if (!IsVisible)
+            {
+                Show();
+            }
+
+            if (WindowState == WindowState.Minimized)
+            {
+                WindowState = WindowState.Normal;
+            }
+
+            ShowInTaskbar = true;
+            Activate();
+        }
+
+        private void ExitApplication()
+        {
+            _isExitRequested = true;
+            Close();
         }
     }
 }
