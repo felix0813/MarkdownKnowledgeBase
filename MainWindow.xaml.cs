@@ -36,6 +36,7 @@ namespace MarkdownKnowledgeBase
         private ScrollViewer? _editorScrollViewer;
         private bool _isSyncingScroll;
         private double _lastEditorScrollPercent;
+        private bool _isPreviewReady;
 
         public MainWindow()
         {
@@ -348,6 +349,7 @@ namespace MarkdownKnowledgeBase
         {
             var html = Markdig.Markdown.ToHtml(EditorBox.Text, _pipeline);
             var palette = GetPreviewPalette();
+            _isPreviewReady = false;
             var page = $@"<html><head><meta charset=""utf-8""><style>
                 body{{font-family:'Segoe UI', sans-serif; padding:18px; background:{palette.Background}; color:{palette.Text};}}
                 h1,h2,h3{{color:{palette.Heading};}}
@@ -776,6 +778,7 @@ namespace MarkdownKnowledgeBase
 
         private void OnPreviewLoadCompleted(object? sender, NavigationEventArgs e)
         {
+            _isPreviewReady = true;
             SyncPreviewScroll(_lastEditorScrollPercent);
         }
 
@@ -799,11 +802,15 @@ namespace MarkdownKnowledgeBase
             }
 
             _isSyncingScroll = true;
-            if (PreviewBrowser.Document is not null)
+            if (_isPreviewReady && PreviewBrowser.Document is not null)
             {
                 try
                 {
                     PreviewBrowser.InvokeScript("setScroll", percent);
+                }
+                catch (COMException)
+                {
+                    _isPreviewReady = false;
                 }
                 finally
                 {
