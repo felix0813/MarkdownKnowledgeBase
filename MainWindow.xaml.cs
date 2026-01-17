@@ -621,11 +621,6 @@ namespace MarkdownKnowledgeBase
             AddMarker("请输入源标记名称", SourceMarkerList);
         }
 
-        private void OnAddTargetMarker(object sender, RoutedEventArgs e)
-        {
-            AddMarker("请输入目标标记名称", TargetMarkerList);
-        }
-
         private void AddMarker(string prompt, ListBox listBox)
         {
             if (_currentNote is null)

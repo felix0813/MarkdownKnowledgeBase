@@ -51,9 +51,8 @@
 
             <DockPanel Margin="0,0,0,12" LastChildFill="False">
                 <WrapPanel DockPanel.Dock="Left">
-                    <Button Margin="0,0,8,8" Click="OnAddSourceMarker">添加源标记</Button>
-                    <Button Margin="0,0,8,8" Click="OnAddTargetMarker">添加目标标记</Button>
-                    <Button Margin="0,0,8,8" Click="OnDeleteMarker">删除标记</Button>
+                        <Button Margin="0,0,8,8" Click="OnAddSourceMarker">添加标记</Button>
+                        <Button Margin="0,0,8,8" Click="OnDeleteMarker">删除标记</Button>
                     <Button Margin="0,0,8,8" Click="OnCreateLink">建立跳转</Button>
                     <Button Margin="0,0,8,8" Click="OnDeleteLink">删除跳转</Button>
                     <Button Margin="0,0,8,8" Click="OnJump">跳转</Button>
