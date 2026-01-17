@@ -1,4 +1,5 @@
 using Markdig;
+using Markdig.Wpf;
 using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO;
@@ -30,6 +31,9 @@ namespace MarkdownKnowledgeBase
         private bool _isDarkMode;
         private System.Windows.Forms.NotifyIcon? _trayIcon;
         private bool _isExitRequested;
+        private ScrollViewer? _editorScrollViewer;
+        private ScrollViewer? _previewScrollViewer;
+        private bool _isSyncingScroll;
 
         public MainWindow()
         {
@@ -45,12 +49,32 @@ namespace MarkdownKnowledgeBase
             RefreshMarkersAndLinks();
             UpdateEditorVisibility();
             UpdatePreviewVisibility();
+            Loaded += OnWindowLoaded;
         }
 
         protected override void OnSourceInitialized(EventArgs e)
         {
             base.OnSourceInitialized(e);
             SetWindowDarkMode(_isDarkMode);
+        }
+
+        private void OnWindowLoaded(object sender, RoutedEventArgs e)
+        {
+            EditorBox.ApplyTemplate();
+            PreviewViewer.ApplyTemplate();
+
+            _editorScrollViewer = FindDescendantScrollViewer(EditorBox);
+            _previewScrollViewer = FindDescendantScrollViewer(PreviewViewer);
+
+            if (_editorScrollViewer is not null)
+            {
+                _editorScrollViewer.ScrollChanged += OnEditorScrollChanged;
+            }
+
+            if (_previewScrollViewer is not null)
+            {
+                _previewScrollViewer.ScrollChanged += OnPreviewScrollChanged;
+            }
         }
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -337,20 +361,67 @@ namespace MarkdownKnowledgeBase
 
         private void UpdatePreview()
         {
-            var html = Markdig.Markdown.ToHtml(EditorBox.Text, _pipeline);
-            var palette = GetPreviewPalette();
-            var page = $@"<html><head><meta charset=""utf-8""><style>
-                body{{font-family:'Segoe UI', sans-serif; padding:18px; background:{palette.Background}; color:{palette.Text};}}
-                h1,h2,h3{{color:{palette.Heading};}}
-                a{{color:{palette.Accent};}}
-                pre{{background:{palette.CodeBackground}; padding:12px; border-radius:8px; border:1px solid {palette.Border};}}
-                code{{background:{palette.InlineCodeBackground}; padding:2px 6px; border-radius:6px;}}
-                blockquote{{border-left:4px solid {palette.Border}; padding-left:12px; color:{palette.MutedText};}}
-                img{{max-width:100%;}}
-                table{{border-collapse:collapse;}}
-                th,td{{border:1px solid {palette.Border}; padding:6px 10px;}}
-            </style></head><body>{html}</body></html>";
-            PreviewBrowser.NavigateToString(page);
+            PreviewViewer.Pipeline = _pipeline;
+            PreviewViewer.Markdown = EditorBox.Text;
+
+            _previewScrollViewer ??= FindDescendantScrollViewer(PreviewViewer);
+            SyncScroll(_editorScrollViewer, _previewScrollViewer);
+        }
+
+        private void OnEditorScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (_isSyncingScroll)
+            {
+                return;
+            }
+
+            SyncScroll(_editorScrollViewer, _previewScrollViewer);
+        }
+
+        private void OnPreviewScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (_isSyncingScroll)
+            {
+                return;
+            }
+
+            SyncScroll(_previewScrollViewer, _editorScrollViewer);
+        }
+
+        private void SyncScroll(ScrollViewer? source, ScrollViewer? target)
+        {
+            if (source is null || target is null || target.ScrollableHeight <= 0)
+            {
+                return;
+            }
+
+            var ratio = source.ScrollableHeight <= 0
+                ? 0
+                : source.VerticalOffset / source.ScrollableHeight;
+
+            _isSyncingScroll = true;
+            target.ScrollToVerticalOffset(ratio * target.ScrollableHeight);
+            _isSyncingScroll = false;
+        }
+
+        private static ScrollViewer? FindDescendantScrollViewer(DependencyObject root)
+        {
+            for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                var child = VisualTreeHelper.GetChild(root, i);
+                if (child is ScrollViewer viewer)
+                {
+                    return viewer;
+                }
+
+                var descendant = FindDescendantScrollViewer(child);
+                if (descendant is not null)
+                {
+                    return descendant;
+                }
+            }
+
+            return null;
         }
 
         private void OnToggleTheme(object sender, RoutedEventArgs e)
@@ -429,25 +500,6 @@ namespace MarkdownKnowledgeBase
         private static void SetBrush(ResourceDictionary resources, string key, string hex)
         {
             resources[key] = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
-        }
-
-        private PreviewPalette GetPreviewPalette()
-        {
-            return _isDarkMode
-                ? new PreviewPalette("#0B1220", "#E5E7EB", "#F8FAFC", "#60A5FA", "#1F2937", "#111827", "#CBD5F5")
-                : new PreviewPalette("#FFFFFF", "#1F2937", "#111827", "#2563EB", "#E5E7EB", "#F3F4F6", "#6B7280");
-        }
-
-        private readonly record struct PreviewPalette(
-            string Background,
-            string Text,
-            string Heading,
-            string Accent,
-            string Border,
-            string CodeBackground,
-            string MutedText)
-        {
-            public string InlineCodeBackground => CodeBackground;
         }
 
         private void OnAddSourceMarker(object sender, RoutedEventArgs e)

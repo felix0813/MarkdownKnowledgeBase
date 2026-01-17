@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MarkdownKnowledgeBase"
+        xmlns:md="clr-namespace:Markdig.Wpf;assembly=Markdig.Wpf"
         mc:Ignorable="d"
         Title="Markdown Knowledge Base" Height="720" Width="1200">
 
@@ -77,7 +78,7 @@
                 </Border>
                 <Border x:Name="PreviewBorder" Grid.Column="1" Background="{DynamicResource PanelBackground}"
                         BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" Margin="6,0,0,0" CornerRadius="8">
-                    <WebBrowser x:Name="PreviewBrowser"/>
+                    <md:MarkdownViewer x:Name="PreviewViewer"/>
                 </Border>
             </Grid>
 
