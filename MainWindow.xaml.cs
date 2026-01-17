@@ -4,10 +4,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Navigation;
 using Application = System.Windows.Application;
 using Color = System.Windows.Media.Color;
 using ColorConverter = System.Windows.Media.ColorConverter;
@@ -19,6 +21,7 @@ namespace MarkdownKnowledgeBase
 {
     public partial class MainWindow : Window
     {
+        private static readonly Regex TaskListRegex = new(@"^\s*[-*+]\s+\[(?<state>[ xX])\]", RegexOptions.Multiline);
         private readonly string _rootPath;
         private readonly string _metadataPath;
         private MetadataStore _metadata = new();
@@ -30,6 +33,9 @@ namespace MarkdownKnowledgeBase
         private bool _isDarkMode;
         private System.Windows.Forms.NotifyIcon? _trayIcon;
         private bool _isExitRequested;
+        private ScrollViewer? _editorScrollViewer;
+        private bool _isSyncingScroll;
+        private double _lastEditorScrollPercent;
 
         public MainWindow()
         {
@@ -45,6 +51,9 @@ namespace MarkdownKnowledgeBase
             RefreshMarkersAndLinks();
             UpdateEditorVisibility();
             UpdatePreviewVisibility();
+            EditorBox.Loaded += OnEditorLoaded;
+            PreviewBrowser.LoadCompleted += OnPreviewLoadCompleted;
+            PreviewBrowser.ObjectForScripting = new PreviewBridge(this);
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -349,7 +358,53 @@ namespace MarkdownKnowledgeBase
                 img{{max-width:100%;}}
                 table{{border-collapse:collapse;}}
                 th,td{{border:1px solid {palette.Border}; padding:6px 10px;}}
-            </style></head><body>{html}</body></html>";
+            </style></head><body>{html}
+            <script>
+                function getScrollPercent() {{
+                    const doc = document.documentElement;
+                    const body = document.body;
+                    const scrollHeight = Math.max(body.scrollHeight, doc.scrollHeight);
+                    const clientHeight = doc.clientHeight;
+                    if (scrollHeight <= clientHeight) {{
+                        return 0;
+                    }}
+                    const scrollTop = doc.scrollTop || body.scrollTop;
+                    return scrollTop / (scrollHeight - clientHeight);
+                }}
+                function notifyScroll() {{
+                    if (window.external && window.external.NotifyPreviewScroll) {{
+                        window.external.NotifyPreviewScroll(getScrollPercent());
+                    }}
+                }}
+                function setScroll(percent) {{
+                    const doc = document.documentElement;
+                    const body = document.body;
+                    const scrollHeight = Math.max(body.scrollHeight, doc.scrollHeight);
+                    const clientHeight = doc.clientHeight;
+                    const top = percent * Math.max(0, scrollHeight - clientHeight);
+                    doc.scrollTop = top;
+                    body.scrollTop = top;
+                }}
+                function initTasks() {{
+                    const boxes = document.querySelectorAll('input[type=""checkbox""]');
+                    boxes.forEach((box, index) => {{
+                        box.disabled = false;
+                        box.dataset.taskIndex = index;
+                        box.addEventListener('click', () => {{
+                            if (window.external && window.external.ToggleTask) {{
+                                window.external.ToggleTask(index, box.checked);
+                            }}
+                        }});
+                    }});
+                }}
+                window.addEventListener('scroll', () => {{
+                    window.requestAnimationFrame(notifyScroll);
+                }});
+                window.onload = () => {{
+                    initTasks();
+                    notifyScroll();
+                }};
+            </script></body></html>";
             PreviewBrowser.NavigateToString(page);
         }
 
@@ -706,6 +761,154 @@ namespace MarkdownKnowledgeBase
         {
             _isExitRequested = true;
             Close();
+        }
+
+        private void OnEditorLoaded(object sender, RoutedEventArgs e)
+        {
+            _editorScrollViewer = FindChildScrollViewer(EditorBox);
+            if (_editorScrollViewer is null)
+            {
+                return;
+            }
+
+            _editorScrollViewer.ScrollChanged += OnEditorScrollChanged;
+        }
+
+        private void OnPreviewLoadCompleted(object? sender, NavigationEventArgs e)
+        {
+            SyncPreviewScroll(_lastEditorScrollPercent);
+        }
+
+        private void OnEditorScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (_isSyncingScroll || _editorScrollViewer is null)
+            {
+                return;
+            }
+
+            var percent = GetScrollPercent(_editorScrollViewer);
+            _lastEditorScrollPercent = percent;
+            SyncPreviewScroll(percent);
+        }
+
+        private void SyncPreviewScroll(double percent)
+        {
+            if (_isSyncingScroll)
+            {
+                return;
+            }
+
+            _isSyncingScroll = true;
+            if (PreviewBrowser.Document is not null)
+            {
+                try
+                {
+                    PreviewBrowser.InvokeScript("setScroll", percent);
+                }
+                finally
+                {
+                    _isSyncingScroll = false;
+                }
+            }
+            else
+            {
+                _isSyncingScroll = false;
+            }
+        }
+
+        private void SyncEditorScroll(double percent)
+        {
+            if (_editorScrollViewer is null)
+            {
+                return;
+            }
+
+            if (_isSyncingScroll)
+            {
+                return;
+            }
+
+            _isSyncingScroll = true;
+            var offset = percent * Math.Max(0, _editorScrollViewer.ExtentHeight - _editorScrollViewer.ViewportHeight);
+            _editorScrollViewer.ScrollToVerticalOffset(offset);
+            _lastEditorScrollPercent = percent;
+            _isSyncingScroll = false;
+        }
+
+        private static double GetScrollPercent(ScrollViewer viewer)
+        {
+            if (viewer.ExtentHeight <= viewer.ViewportHeight)
+            {
+                return 0;
+            }
+
+            return viewer.VerticalOffset / (viewer.ExtentHeight - viewer.ViewportHeight);
+        }
+
+        private static ScrollViewer? FindChildScrollViewer(DependencyObject parent)
+        {
+            for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is ScrollViewer viewer)
+                {
+                    return viewer;
+                }
+
+                var nested = FindChildScrollViewer(child);
+                if (nested is not null)
+                {
+                    return nested;
+                }
+            }
+
+            return null;
+        }
+
+        private void ToggleTask(int index, bool isChecked)
+        {
+            var matches = TaskListRegex.Matches(EditorBox.Text);
+            if (index < 0 || index >= matches.Count)
+            {
+                return;
+            }
+
+            var match = matches[index];
+            var stateGroup = match.Groups["state"];
+            if (!stateGroup.Success)
+            {
+                return;
+            }
+
+            var text = EditorBox.Text;
+            var chars = text.ToCharArray();
+            chars[stateGroup.Index] = isChecked ? 'x' : ' ';
+            var selectionStart = EditorBox.SelectionStart;
+            var selectionLength = EditorBox.SelectionLength;
+            EditorBox.Text = new string(chars);
+            EditorBox.SelectionStart = Math.Clamp(selectionStart, 0, EditorBox.Text.Length);
+            EditorBox.SelectionLength = selectionLength;
+        }
+
+        [ComVisible(true)]
+        public sealed class PreviewBridge
+        {
+            private readonly MainWindow _owner;
+
+            public PreviewBridge(MainWindow owner)
+            {
+                _owner = owner;
+            }
+
+            public void NotifyPreviewScroll(double percent)
+            {
+                _owner.SyncEditorScroll(percent);
+            }
+
+            public void ToggleTask(int index, bool isChecked)
+            {
+                _owner.ToggleTask(index, isChecked);
+            }
         }
     }
 }
