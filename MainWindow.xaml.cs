@@ -4,9 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 
 namespace MarkdownKnowledgeBase
@@ -36,6 +38,12 @@ namespace MarkdownKnowledgeBase
             RefreshMarkersAndLinks();
             UpdateEditorVisibility();
             UpdatePreviewVisibility();
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            SetWindowDarkMode(_isDarkMode);
         }
 
         private void EnsureRoot()
@@ -316,6 +324,27 @@ namespace MarkdownKnowledgeBase
             UpdatePreview();
         }
 
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int attributeValue, int attributeSize);
+
+        private void SetWindowDarkMode(bool isDark)
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero)
+            {
+                return;
+            }
+
+            int useDark = isDark ? 1 : 0;
+            const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+            const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19;
+
+            if (DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDark, sizeof(int)) != 0)
+            {
+                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref useDark, sizeof(int));
+            }
+        }
+
         private void ApplyTheme(bool isDark)
         {
             var resources = Application.Current.Resources;
@@ -357,6 +386,8 @@ namespace MarkdownKnowledgeBase
                 SetBrush(resources, "SelectionText", "#111827");
                 ToggleThemeButton.Content = "夜间模式";
             }
+        
+            SetWindowDarkMode(isDark);
         }
 
         private static void SetBrush(ResourceDictionary resources, string key, string hex)
