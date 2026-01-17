@@ -1,5 +1,3 @@
-using System;
-
 namespace MarkdownKnowledgeBase
 {
     public record NoteItem(string Name, string Path);
