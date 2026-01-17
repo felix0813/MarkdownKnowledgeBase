@@ -5,74 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MarkdownKnowledgeBase"
         mc:Ignorable="d"
-        Title="Markdown Knowledge Base" Height="720" Width="1200" Background="#F1F3F6">
-    <Window.Resources>
-        <SolidColorBrush x:Key="PanelBackground" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="PanelBorder" Color="#E3E7EF"/>
-        <SolidColorBrush x:Key="PrimaryText" Color="#1F2937"/>
-        <SolidColorBrush x:Key="SecondaryText" Color="#6B7280"/>
-        <SolidColorBrush x:Key="ButtonBackground" Color="#2563EB"/>
-        <SolidColorBrush x:Key="ButtonHover" Color="#1D4ED8"/>
-        <SolidColorBrush x:Key="ButtonPressed" Color="#1E40AF"/>
-
-        <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryText}"/>
-        </Style>
-
-        <Style TargetType="Button">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="{StaticResource ButtonBackground}"/>
-            <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="MinHeight" Value="36"/>
-            <Setter Property="MinWidth" Value="96"/>
-            <Setter Property="MaxWidth" Value="180"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="ContentTemplate">
-                <Setter.Value>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center"/>
-                    </DataTemplate>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="6">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource ButtonHover}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="{StaticResource ButtonPressed}"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.6"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style TargetType="ListBox">
-            <Setter Property="BorderBrush" Value="{StaticResource PanelBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="#F9FAFB"/>
-            <Setter Property="Padding" Value="4"/>
-        </Style>
-
-        <Style TargetType="TextBox">
-            <Setter Property="BorderBrush" Value="{StaticResource PanelBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="Background" Value="White"/>
-        </Style>
-    </Window.Resources>
+        Title="Markdown Knowledge Base" Height="720" Width="1200" MinWidth="1024" MinHeight="640"
+        Background="{DynamicResource AppBackground}">
 
     <Grid Margin="16">
         <Grid.ColumnDefinitions>
@@ -80,7 +14,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}"
+        <Border Grid.Column="0" Background="{DynamicResource PanelBackground}" BorderBrush="{DynamicResource PanelBorder}"
                 BorderThickness="1" CornerRadius="10" Padding="12">
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
@@ -105,7 +39,7 @@
             </DockPanel>
         </Border>
 
-        <Border Grid.Column="1" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}"
+        <Border Grid.Column="1" Background="{DynamicResource PanelBackground}" BorderBrush="{DynamicResource PanelBorder}"
                 BorderThickness="1" CornerRadius="10" Padding="16">
         <Grid>
             <Grid.RowDefinitions>
@@ -127,6 +61,7 @@
                 <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
                     <Button Margin="0,0,8,8" x:Name="ToggleEditorButton" Click="OnToggleEditor">隐藏编辑</Button>
                     <Button Margin="0,0,8,8" x:Name="TogglePreviewButton" Click="OnTogglePreview">隐藏预览</Button>
+                    <Button Margin="0,0,8,8" x:Name="ToggleThemeButton" Click="OnToggleTheme">夜间模式</Button>
                 </WrapPanel>
             </DockPanel>
 
@@ -135,12 +70,14 @@
                     <ColumnDefinition x:Name="EditorColumn" Width="*"/>
                     <ColumnDefinition x:Name="PreviewColumn" Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Border x:Name="EditorBorder" Grid.Column="0" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" Margin="0,0,6,0" CornerRadius="8">
+                <Border x:Name="EditorBorder" Grid.Column="0" Background="{DynamicResource PanelBackground}"
+                        BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" Margin="0,0,6,0" CornerRadius="8">
                     <TextBox x:Name="EditorBox" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap"
                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                              TextChanged="OnEditorTextChanged"/>
                 </Border>
-                <Border x:Name="PreviewBorder" Grid.Column="1" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" Margin="6,0,0,0" CornerRadius="8">
+                <Border x:Name="PreviewBorder" Grid.Column="1" Background="{DynamicResource PanelBackground}"
+                        BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" Margin="6,0,0,0" CornerRadius="8">
                     <WebBrowser x:Name="PreviewBrowser"/>
                 </Border>
             </Grid>

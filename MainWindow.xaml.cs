@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace MarkdownKnowledgeBase
 {
@@ -20,10 +21,12 @@ namespace MarkdownKnowledgeBase
         private NoteItem? _currentNote;
         private bool _isEditorVisible = true;
         private bool _isPreviewVisible = true;
+        private bool _isDarkMode;
 
         public MainWindow()
         {
             InitializeComponent();
+            ApplyTheme(false);
             _rootPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "MarkdownKnowledgeBase");
             _metadataPath = Path.Combine(_rootPath, ".metadata.json");
             _pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
@@ -291,8 +294,93 @@ namespace MarkdownKnowledgeBase
         private void UpdatePreview()
         {
             var html = Markdig.Markdown.ToHtml(EditorBox.Text, _pipeline);
-            var page = $@"<html><head><meta charset=""utf-8""><style>body{{font-family:'Segoe UI', sans-serif; padding:16px;}} pre{{background:#f4f4f4; padding:12px;}}</style></head><body>{html}</body></html>";
+            var palette = GetPreviewPalette();
+            var page = $@"<html><head><meta charset=""utf-8""><style>
+                body{{font-family:'Segoe UI', sans-serif; padding:18px; background:{palette.Background}; color:{palette.Text};}}
+                h1,h2,h3{{color:{palette.Heading};}}
+                a{{color:{palette.Accent};}}
+                pre{{background:{palette.CodeBackground}; padding:12px; border-radius:8px; border:1px solid {palette.Border};}}
+                code{{background:{palette.InlineCodeBackground}; padding:2px 6px; border-radius:6px;}}
+                blockquote{{border-left:4px solid {palette.Border}; padding-left:12px; color:{palette.MutedText};}}
+                img{{max-width:100%;}}
+                table{{border-collapse:collapse;}}
+                th,td{{border:1px solid {palette.Border}; padding:6px 10px;}}
+            </style></head><body>{html}</body></html>";
             PreviewBrowser.NavigateToString(page);
+        }
+
+        private void OnToggleTheme(object sender, RoutedEventArgs e)
+        {
+            _isDarkMode = !_isDarkMode;
+            ApplyTheme(_isDarkMode);
+            UpdatePreview();
+        }
+
+        private void ApplyTheme(bool isDark)
+        {
+            var resources = Application.Current.Resources;
+            if (isDark)
+            {
+                SetBrush(resources, "AppBackground", "#0F172A");
+                SetBrush(resources, "PanelBackground", "#111827");
+                SetBrush(resources, "PanelBorder", "#1F2937");
+                SetBrush(resources, "PrimaryText", "#E5E7EB");
+                SetBrush(resources, "SecondaryText", "#9CA3AF");
+                SetBrush(resources, "ButtonBackground", "#3B82F6");
+                SetBrush(resources, "ButtonHover", "#2563EB");
+                SetBrush(resources, "ButtonPressed", "#1D4ED8");
+                SetBrush(resources, "ButtonBorder", "#1D4ED8");
+                SetBrush(resources, "InputBackground", "#0B1220");
+                SetBrush(resources, "InputBorder", "#233049");
+                SetBrush(resources, "ListBackground", "#0B1220");
+                SetBrush(resources, "ListItemHover", "#1F2937");
+                SetBrush(resources, "SelectionBackground", "#1E3A8A");
+                SetBrush(resources, "SelectionText", "#E5E7EB");
+                ToggleThemeButton.Content = "日间模式";
+            }
+            else
+            {
+                SetBrush(resources, "AppBackground", "#F1F3F6");
+                SetBrush(resources, "PanelBackground", "#FFFFFF");
+                SetBrush(resources, "PanelBorder", "#E3E7EF");
+                SetBrush(resources, "PrimaryText", "#111827");
+                SetBrush(resources, "SecondaryText", "#6B7280");
+                SetBrush(resources, "ButtonBackground", "#2563EB");
+                SetBrush(resources, "ButtonHover", "#1D4ED8");
+                SetBrush(resources, "ButtonPressed", "#1E40AF");
+                SetBrush(resources, "ButtonBorder", "#1D4ED8");
+                SetBrush(resources, "InputBackground", "#FFFFFF");
+                SetBrush(resources, "InputBorder", "#D7DDE8");
+                SetBrush(resources, "ListBackground", "#F9FAFB");
+                SetBrush(resources, "ListItemHover", "#EEF2FF");
+                SetBrush(resources, "SelectionBackground", "#DBEAFE");
+                SetBrush(resources, "SelectionText", "#111827");
+                ToggleThemeButton.Content = "夜间模式";
+            }
+        }
+
+        private static void SetBrush(ResourceDictionary resources, string key, string hex)
+        {
+            resources[key] = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
+        }
+
+        private PreviewPalette GetPreviewPalette()
+        {
+            return _isDarkMode
+                ? new PreviewPalette("#0B1220", "#E5E7EB", "#F8FAFC", "#60A5FA", "#1F2937", "#111827", "#CBD5F5")
+                : new PreviewPalette("#FFFFFF", "#1F2937", "#111827", "#2563EB", "#E5E7EB", "#F3F4F6", "#6B7280");
+        }
+
+        private readonly record struct PreviewPalette(
+            string Background,
+            string Text,
+            string Heading,
+            string Accent,
+            string Border,
+            string CodeBackground,
+            string MutedText)
+        {
+            public string InlineCodeBackground => CodeBackground;
         }
 
         private void OnAddSourceMarker(object sender, RoutedEventArgs e)
