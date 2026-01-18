@@ -10,7 +10,6 @@ using System.Windows.Media;
 using Application = System.Windows.Application;
 using Color = System.Windows.Media.Color;
 using ColorConverter = System.Windows.Media.ColorConverter;
-using ListBox = System.Windows.Controls.ListBox;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
@@ -44,7 +43,7 @@ namespace MarkdownKnowledgeBase
             EnsureRoot();
             LoadMetadata();
             LoadCategories();
-            RefreshMarkersAndLinks();
+            RefreshLineMarkers();
             UpdateEditorVisibility();
             UpdatePreviewVisibility();
             Loaded += OnWindowLoaded;
@@ -73,6 +72,9 @@ namespace MarkdownKnowledgeBase
             {
                 _previewScrollViewer.ScrollChanged += OnPreviewScrollChanged;
             }
+
+            EditorBox.SizeChanged += (_, _) => RefreshLineMarkers();
+            RefreshLineMarkers();
         }
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -117,7 +119,7 @@ namespace MarkdownKnowledgeBase
         private void SaveMetadata()
         {
             _metadata.Save(_metadataPath);
-            RefreshMarkersAndLinks();
+            RefreshLineMarkers();
         }
 
         private void LoadCategories()
@@ -138,26 +140,58 @@ namespace MarkdownKnowledgeBase
             NoteList.ItemsSource = notes;
         }
 
-        private void RefreshMarkersAndLinks()
+        private void RefreshLineMarkers()
         {
-            SourceMarkerList.ItemsSource = _metadata.Markers.Select(marker => DisplayMarker(marker)).ToList();
-            TargetMarkerList.ItemsSource = _metadata.Markers.Select(marker => DisplayMarker(marker)).ToList();
-            LinkList.ItemsSource = _metadata.Links.Select(link => DisplayLink(link)).ToList();
+            MarkerOverlay.Children.Clear();
+
+            if (_currentNote is null)
+            {
+                return;
+            }
+
+            var relativePath = GetRelativeNotePath(_currentNote.Path);
+            var links = _metadata.LineLinks.Where(link => link.SourceNotePath == relativePath).ToList();
+            foreach (var link in links)
+            {
+                var lineIndex = Math.Clamp(link.SourceLineIndex, 0, Math.Max(0, EditorBox.LineCount - 1));
+                var charIndex = EditorBox.GetCharacterIndexFromLineIndex(lineIndex);
+                var rect = EditorBox.GetRectFromCharacterIndex(charIndex);
+                if (rect.IsEmpty)
+                {
+                    continue;
+                }
+
+                var button = CreateLineMarkerButton(link);
+                Canvas.SetLeft(button, 2);
+                Canvas.SetTop(button, rect.Top + 2);
+                MarkerOverlay.Children.Add(button);
+            }
         }
 
-        private string DisplayMarker(Marker marker)
+        private Button CreateLineMarkerButton(LineLink link)
         {
-            var noteName = Path.GetFileNameWithoutExtension(marker.NotePath);
-            return $"{marker.Name} ({noteName})";
+            var button = new Button
+            {
+                Content = "🔖",
+                Width = 18,
+                Height = 18,
+                Padding = new Thickness(0),
+                Margin = new Thickness(0),
+                ToolTip = $"跳转到: {GetNoteDisplayName(link.TargetNotePath)}",
+                Tag = link.Id
+            };
+            button.Click += OnLineMarkerClicked;
+            button.ContextMenu = BuildLineMarkerContextMenu(link.Id);
+            return button;
         }
 
-        private string DisplayLink(Link link)
+        private ContextMenu BuildLineMarkerContextMenu(string linkId)
         {
-            var source = _metadata.Markers.FirstOrDefault(marker => marker.Id == link.SourceMarkerId);
-            var target = _metadata.Markers.FirstOrDefault(marker => marker.Id == link.TargetMarkerId);
-            var sourceLabel = source is null ? "未知" : DisplayMarker(source);
-            var targetLabel = target is null ? "未知" : DisplayMarker(target);
-            return $"{sourceLabel} -> {targetLabel}";
+            var menu = new ContextMenu();
+            var deleteItem = new MenuItem { Header = "删除跳转标记" };
+            deleteItem.Click += (_, _) => DeleteLineLink(linkId);
+            menu.Items.Add(deleteItem);
+            return menu;
         }
 
         private void OnAddCategory(object sender, RoutedEventArgs e)
@@ -295,8 +329,7 @@ namespace MarkdownKnowledgeBase
             }
 
             var relativePath = GetRelativeNotePath(note.Path);
-            var markersToRemove = _metadata.Markers.Where(marker => marker.NotePath == relativePath).ToList();
-            RemoveMarkersAndLinks(markersToRemove);
+            RemoveLineLinksForNote(relativePath);
 
             if (_currentNote?.Path == note.Path)
             {
@@ -362,8 +395,12 @@ namespace MarkdownKnowledgeBase
                 File.WriteAllText(newPath, EditorBox.Text, Encoding.UTF8);
             }
 
-            _metadata.Markers = _metadata.Markers
-                .Select(marker => marker.NotePath == oldRelative ? marker with { NotePath = newRelative } : marker)
+            _metadata.LineLinks = _metadata.LineLinks
+                .Select(link => link.SourceNotePath == oldRelative
+                    ? link with { SourceNotePath = newRelative }
+                    : link.TargetNotePath == oldRelative
+                        ? link with { TargetNotePath = newRelative }
+                        : link)
                 .ToList();
             SaveMetadata();
 
@@ -385,12 +422,14 @@ namespace MarkdownKnowledgeBase
                 _currentNote = note;
                 EditorBox.Text = File.Exists(note.Path) ? File.ReadAllText(note.Path) : string.Empty;
                 UpdatePreview();
+                RefreshLineMarkers();
             }
         }
 
         private void OnEditorTextChanged(object sender, TextChangedEventArgs e)
         {
             UpdatePreview();
+            RefreshLineMarkers();
         }
 
         private void OnToggleEditor(object sender, RoutedEventArgs e)
@@ -488,6 +527,7 @@ namespace MarkdownKnowledgeBase
             }
 
             SyncScroll(_editorScrollViewer, _previewScrollViewer);
+            RefreshLineMarkers();
         }
 
         private void OnPreviewScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -614,12 +654,7 @@ namespace MarkdownKnowledgeBase
             resources[key] = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
         }
 
-        private void OnAddSourceMarker(object sender, RoutedEventArgs e)
-        {
-            AddMarker("请输入源标记名称", SourceMarkerList);
-        }
-
-        private void AddMarker(string prompt, ListBox listBox)
+        private void OnAddLineLink(object sender, RoutedEventArgs e)
         {
             if (_currentNote is null)
             {
@@ -627,96 +662,38 @@ namespace MarkdownKnowledgeBase
                 return;
             }
 
-            var name = Prompt(prompt);
-            if (string.IsNullOrWhiteSpace(name))
+            var options = GetAllNoteOptions();
+            if (options.Count == 0)
+            {
+                MessageBox.Show("暂无可用的目标文档。");
+                return;
+            }
+
+            var dialog = new NoteSelectionDialog(options) { Owner = this };
+            if (dialog.ShowDialog() != true || dialog.SelectedNote is null)
             {
                 return;
             }
 
-            var marker = new Marker(Guid.NewGuid().ToString(), name, GetRelativeNotePath(_currentNote.Path), EditorBox.SelectionStart);
-            _metadata.Markers.Add(marker);
+            var sourceRelative = GetRelativeNotePath(_currentNote.Path);
+            var targetRelative = GetRelativeNotePath(dialog.SelectedNote.Path);
+            var lineIndex = EditorBox.GetLineIndexFromCharacterIndex(EditorBox.SelectionStart);
+
+            var lineLink = new LineLink(Guid.NewGuid().ToString(), sourceRelative, lineIndex, targetRelative, 0);
+            _metadata.LineLinks.Add(lineLink);
             SaveMetadata();
-
-            var display = DisplayMarker(marker);
-            var markers = _metadata.Markers.Select(DisplayMarker).ToList();
-            listBox.ItemsSource = markers;
-            listBox.SelectedItem = display;
+            RefreshLineMarkers();
         }
 
-        private void OnDeleteMarker(object sender, RoutedEventArgs e)
+        private void OnLineMarkerClicked(object sender, RoutedEventArgs e)
         {
-            var marker = GetSelectedMarker(SourceMarkerList.SelectedItem as string)
-                ?? GetSelectedMarker(TargetMarkerList.SelectedItem as string);
-            if (marker is null)
-            {
-                MessageBox.Show("请选择要删除的标记。");
-                return;
-            }
-
-            var confirm = MessageBox.Show($"确定删除标记 \"{marker.Name}\" 吗？", "确认删除", MessageBoxButton.YesNo);
-            if (confirm != MessageBoxResult.Yes)
+            if (sender is not Button button || button.Tag is not string linkId)
             {
                 return;
             }
 
-            RemoveMarkersAndLinks(new List<Marker> { marker });
-        }
-
-        private void OnCreateLink(object sender, RoutedEventArgs e)
-        {
-            var sourceMarker = GetSelectedMarker(SourceMarkerList.SelectedItem as string);
-            var targetMarker = GetSelectedMarker(TargetMarkerList.SelectedItem as string);
-            if (sourceMarker is null || targetMarker is null)
-            {
-                MessageBox.Show("请选择源标记和目标标记。");
-                return;
-            }
-
-            var link = new Link(Guid.NewGuid().ToString(), sourceMarker.Id, targetMarker.Id);
-            _metadata.Links.Add(link);
-            SaveMetadata();
-        }
-
-        private void OnDeleteLink(object sender, RoutedEventArgs e)
-        {
-            if (LinkList.SelectedItem is not string linkDisplay)
-            {
-                MessageBox.Show("请选择要删除的跳转关系。");
-                return;
-            }
-
-            var link = _metadata.Links.FirstOrDefault(item => DisplayLink(item) == linkDisplay);
+            var link = _metadata.LineLinks.FirstOrDefault(item => item.Id == linkId);
             if (link is null)
-            {
-                return;
-            }
-
-            var confirm = MessageBox.Show("确定删除该跳转关系吗？", "确认删除", MessageBoxButton.YesNo);
-            if (confirm != MessageBoxResult.Yes)
-            {
-                return;
-            }
-
-            _metadata.Links.Remove(link);
-            SaveMetadata();
-        }
-
-        private void OnJump(object sender, RoutedEventArgs e)
-        {
-            if (LinkList.SelectedItem is not string linkDisplay)
-            {
-                MessageBox.Show("请选择跳转关系。");
-                return;
-            }
-
-            var link = _metadata.Links.FirstOrDefault(item => DisplayLink(item) == linkDisplay);
-            if (link is null)
-            {
-                return;
-            }
-
-            var targetMarker = _metadata.Markers.FirstOrDefault(marker => marker.Id == link.TargetMarkerId);
-            if (targetMarker is null)
             {
                 return;
             }
@@ -726,7 +703,21 @@ namespace MarkdownKnowledgeBase
                 _navigationStack.Push(new NavigationEntry(_currentNote.Path, EditorBox.SelectionStart));
             }
 
-            NavigateToMarker(targetMarker);
+            var targetPath = Path.Combine(_rootPath, link.TargetNotePath);
+            OpenNoteAt(targetPath, link.TargetPosition);
+        }
+
+        private void DeleteLineLink(string linkId)
+        {
+            var link = _metadata.LineLinks.FirstOrDefault(item => item.Id == linkId);
+            if (link is null)
+            {
+                return;
+            }
+
+            _metadata.LineLinks.Remove(link);
+            SaveMetadata();
+            RefreshLineMarkers();
         }
 
         private void OnBack(object sender, RoutedEventArgs e)
@@ -738,12 +729,6 @@ namespace MarkdownKnowledgeBase
 
             var entry = _navigationStack.Pop();
             OpenNoteAt(entry.NotePath, entry.Position);
-        }
-
-        private void NavigateToMarker(Marker marker)
-        {
-            var notePath = Path.Combine(_rootPath, marker.NotePath);
-            OpenNoteAt(notePath, marker.Position);
         }
 
         private void OpenNoteAt(string notePath, int position)
@@ -769,16 +754,7 @@ namespace MarkdownKnowledgeBase
             EditorBox.SelectionStart = Math.Clamp(position, 0, EditorBox.Text.Length);
             EditorBox.Focus();
             UpdatePreview();
-        }
-
-        private Marker? GetSelectedMarker(string? display)
-        {
-            if (string.IsNullOrWhiteSpace(display))
-            {
-                return null;
-            }
-
-            return _metadata.Markers.FirstOrDefault(marker => DisplayMarker(marker) == display);
+            RefreshLineMarkers();
         }
 
         private string GetRelativeNotePath(string notePath)
@@ -786,19 +762,60 @@ namespace MarkdownKnowledgeBase
             return Path.GetRelativePath(_rootPath, notePath);
         }
 
-        private void RemoveMarkersAndLinks(List<Marker> markersToRemove)
+        private void RemoveLineLinksForNote(string relativePath)
         {
-            if (markersToRemove.Count == 0)
+            var originalCount = _metadata.LineLinks.Count;
+            _metadata.LineLinks = _metadata.LineLinks
+                .Where(link => link.SourceNotePath != relativePath && link.TargetNotePath != relativePath)
+                .ToList();
+            if (_metadata.LineLinks.Count != originalCount)
             {
-                return;
+                SaveMetadata();
+            }
+        }
+
+        private List<NoteOption> GetAllNoteOptions()
+        {
+            var options = new List<NoteOption>();
+            if (!Directory.Exists(_rootPath))
+            {
+                return options;
             }
 
-            var markerIds = new HashSet<string>(markersToRemove.Select(marker => marker.Id));
-            _metadata.Markers = _metadata.Markers.Where(marker => !markerIds.Contains(marker.Id)).ToList();
-            _metadata.Links = _metadata.Links
-                .Where(link => !markerIds.Contains(link.SourceMarkerId) && !markerIds.Contains(link.TargetMarkerId))
-                .ToList();
-            SaveMetadata();
+            foreach (var categoryPath in Directory.GetDirectories(_rootPath))
+            {
+                var categoryName = Path.GetFileName(categoryPath);
+                if (string.IsNullOrWhiteSpace(categoryName))
+                {
+                    continue;
+                }
+
+                foreach (var notePath in Directory.GetFiles(categoryPath, "*.md"))
+                {
+                    var noteName = Path.GetFileNameWithoutExtension(notePath);
+                    if (string.IsNullOrWhiteSpace(noteName))
+                    {
+                        continue;
+                    }
+
+                    options.Add(new NoteOption($"{categoryName} / {noteName}", notePath));
+                }
+            }
+
+            return options.OrderBy(option => option.DisplayName).ToList();
+        }
+
+        private string GetNoteDisplayName(string relativeNotePath)
+        {
+            var trimmed = relativeNotePath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+            var parts = trimmed.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+                var name = Path.GetFileNameWithoutExtension(parts[^1]);
+                return $"{parts[^2]} / {name}";
+            }
+
+            return Path.GetFileNameWithoutExtension(relativeNotePath);
         }
 
         private string? Prompt(string prompt)
