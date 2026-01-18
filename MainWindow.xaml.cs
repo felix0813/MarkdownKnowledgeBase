@@ -8,9 +8,11 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using Application = System.Windows.Application;
+using Brushes = System.Windows.Media.Brushes;
 using Button = System.Windows.Controls.Button;
 using Color = System.Windows.Media.Color;
 using ColorConverter = System.Windows.Media.ColorConverter;
+using Control = System.Windows.Controls.Control;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
@@ -176,11 +178,24 @@ namespace MarkdownKnowledgeBase
                 Content = "🔖",
                 Width = 18,
                 Height = 18,
+                FontSize = 10,
                 Padding = new Thickness(0),
                 Margin = new Thickness(0),
+                BorderThickness = new Thickness(0),
                 ToolTip = $"跳转到: {GetNoteDisplayName(link.TargetNotePath)}",
+                Background = Brushes.Transparent,
                 Tag = link.Id
             };
+            // 本地样式覆盖系统样式中可能存在的 MinHeight 等限制
+            var style = new Style(typeof(Button));
+            style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(0)));
+            style.Setters.Add(new Setter(Control.FontSizeProperty, 12.0));
+            style.Setters.Add(new Setter(Control.MinHeightProperty, 0.0));
+            style.Setters.Add(new Setter(Control.MinWidthProperty, 0.0));
+            style.Setters.Add(new Setter(Control.HeightProperty, 18.0));
+            style.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center));
+            style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0)));
+            button.Style = style;
             button.Click += OnLineMarkerClicked;
             button.ContextMenu = BuildLineMarkerContextMenu(link.Id);
             return button;
