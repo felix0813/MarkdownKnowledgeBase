@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using MessageBox = System.Windows.MessageBox;
 
 namespace MarkdownKnowledgeBase
 {
