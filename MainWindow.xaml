@@ -46,16 +46,11 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="220"/>
             </Grid.RowDefinitions>
 
             <DockPanel Margin="0,0,0,12" LastChildFill="False">
                 <WrapPanel DockPanel.Dock="Left">
-                        <Button Margin="0,0,8,8" Click="OnAddSourceMarker">添加标记</Button>
-                        <Button Margin="0,0,8,8" Click="OnDeleteMarker">删除标记</Button>
-                    <Button Margin="0,0,8,8" Click="OnCreateLink">建立跳转</Button>
-                    <Button Margin="0,0,8,8" Click="OnDeleteLink">删除跳转</Button>
-                    <Button Margin="0,0,8,8" Click="OnJump">跳转</Button>
+                    <Button Margin="0,0,8,8" Click="OnAddLineLink">添加跳转标记</Button>
                     <Button Margin="0,0,8,8" Click="OnBack">返回</Button>
                 </WrapPanel>
                 <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
@@ -72,9 +67,16 @@
                 </Grid.ColumnDefinitions>
                 <Border x:Name="EditorBorder" Grid.Column="0" Background="{DynamicResource PanelBackground}"
                         BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" Margin="0,0,6,0" CornerRadius="8">
-                    <TextBox x:Name="EditorBox" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap"
-                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                             TextChanged="OnEditorTextChanged"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="22"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Canvas x:Name="MarkerOverlay" Grid.Column="0" Background="Transparent"/>
+                        <TextBox x:Name="EditorBox" Grid.Column="1" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                 TextChanged="OnEditorTextChanged"/>
+                    </Grid>
                 </Border>
                 <Border x:Name="PreviewBorder" Grid.Column="1" Background="{DynamicResource PanelBackground}"
                         BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" Margin="6,0,0,0" CornerRadius="8">
@@ -82,25 +84,6 @@
                 </Border>
             </Grid>
 
-            <Grid Grid.Row="2" Margin="0,12,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="源标记" FontWeight="Bold" Margin="0,0,0,6"/>
-                    <ListBox x:Name="SourceMarkerList"/>
-                </StackPanel>
-                <StackPanel Grid.Column="1" Margin="12,0">
-                    <TextBlock Text="目标标记" FontWeight="Bold" Margin="0,0,0,6"/>
-                    <ListBox x:Name="TargetMarkerList"/>
-                </StackPanel>
-                <StackPanel Grid.Column="2">
-                    <TextBlock Text="跳转" FontWeight="Bold" Margin="0,0,0,6"/>
-                    <ListBox x:Name="LinkList"/>
-                </StackPanel>
-            </Grid>
         </Grid>
         </Border>
     </Grid>

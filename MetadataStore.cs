@@ -7,6 +7,7 @@ namespace MarkdownKnowledgeBase
     {
         public List<Marker> Markers { get; set; } = new();
         public List<Link> Links { get; set; } = new();
+        public List<LineLink> LineLinks { get; set; } = new();
 
         public static MetadataStore Load(string path)
         {
